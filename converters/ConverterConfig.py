@@ -83,15 +83,15 @@ class ConverterConfig(object):
         return r
 
 mode_dict = {0:'original',
-                    1:'overlay',
-                    2:'hist-match',
-                    3:'hist-match-bw',
-                    4:'seamless',
-                    5:'seamless-hist-match',
-                    6:'raw-rgb',
-                    7:'raw-rgb-mask',
-                    8:'raw-mask-only',
-                    9:'raw-predicted-only'}
+             1:'overlay',
+             2:'hist-match',
+             3:'seamless2',
+             4:'seamless',
+             5:'seamless-hist-match',             
+             6:'raw-rgb',
+             7:'raw-rgb-mask',
+             8:'raw-mask-only',
+             9:'raw-predicted-only'}
 
 full_face_mask_mode_dict = {1:'learned',
                                     2:'dst',

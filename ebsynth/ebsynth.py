@@ -37,6 +37,7 @@ def run (img_style, guides,
          num_search_vote_iters = 6,
          num_patch_match_iters = 4,
          stop_threshold = 5,
+         uniformity_weight = 3500.0,
          extraPass3x3 = False,
          ):
     if patch_size < 3:
@@ -111,7 +112,7 @@ def run (img_style, guides,
         elif nt_h != t_h or nt_w != t_w:
             raise ValueError ("guides target resolutions must be equal")
 
-        if s_c != t_c:
+        if s_c != nt_c:
             raise ValueError ("guide source and target channels must match exactly.")
 
         guides_source.append (source_guide)
@@ -161,9 +162,9 @@ def run (img_style, guides,
                            None,                    #targetModulationData (width * height * numGuideChannels) bytes, scan-line order; pass NULL to switch off the modulation
                            style_weights,           #styleWeights (numStyleChannels) floats
                            guides_weights,          #guideWeights (numGuideChannels) floats
-                           3500.0,                  #uniformityWeight reasonable values are between 500-15000, 3500 is a good default
+                           uniformity_weight,                   #uniformityWeight reasonable values are between 500-15000, 3500 is a good default
                            patch_size,              #patchSize odd sizes only, use 5 for 5x5 patch, 7 for 7x7, etc.
-                           EBSYNTH_VOTEMODE_WEIGHTED,  #voteMode use VOTEMODE_WEIGHTED for sharper result
+                           EBSYNTH_VOTEMODE_PLAIN,  #voteMode use VOTEMODE_WEIGHTED for sharper result
                            num_pyramid_levels,      #numPyramidLevels
 
                            num_search_vote_iters_per_level, #numSearchVoteItersPerLevel how many search/vote iters to perform at each level (array of ints, coarse first, fine last)
@@ -174,15 +175,27 @@ def run (img_style, guides,
                            buffer                    #outputImageData  (width * height * numStyleChannels) bytes, scan-line order
                           )
 
-    return np.frombuffer(buffer, dtype=np.uint8).reshape ( (t_h,t_w,sc) )
+    return np.frombuffer(buffer, dtype=np.uint8).reshape ( (t_h,t_w,sc) ).copy()
 
 #transfer color from source to target
-def color_transfer(img_source,img_target):
-    guide = ( cv2.cvtColor(img_source, cv2.COLOR_BGR2GRAY),
-              cv2.cvtColor(img_target, cv2.COLOR_BGR2GRAY),
-              1.0 )
+def color_transfer(img_source, img_target):
+    guides = [( cv2.cvtColor(img_source, cv2.COLOR_BGR2GRAY),
+                cv2.cvtColor(img_target, cv2.COLOR_BGR2GRAY),
+                1 ) ]
     
-    #if mask is not None:
-    #    guide = ( guide[0] * mask, guide[1] * mask, guide[2] )
-        
-    return run(img_source, guides=[guide], patch_size=3, extraPass3x3=True)
+    h,w,c = img_source.shape
+    result = []
+    for i in range(c):
+        result += [        
+                    run( img_source[...,i:i+1] , guides=guides, 
+                                patch_size=11, 
+                                num_pyramid_levels=40, 
+                                num_search_vote_iters = 6,
+                                num_patch_match_iters = 4,
+                                stop_threshold = 5,
+                                uniformity_weight=500.0,
+                                extraPass3x3=True,
+                                )
+                  ]
+                    
+    return np.concatenate( result, axis=-1 )
